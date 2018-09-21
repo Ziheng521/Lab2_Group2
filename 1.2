@@ -1,0 +1,29 @@
+/*
+ * GccApplication3.c
+ *
+ * Created: 2018/9/7 17:50:58
+ * Author : lzhof
+ */ 
+#define F_CPU 16000000L
+#include <avr/io.h>
+#include <avr/interrupt.h>
+#include <util/delay.h>
+
+
+int main(void)
+{
+    /* Replace with your application code */
+	DDRD |=0x40;
+	TIMSK0 = (1<<OCIE0A); //Timer/Counter0 Output Compare Match A Interrupt Enable
+	OCR0A = 71;//set Output Compare Register A
+	TCCR0B=(1<<CS02); //prescaler CLK/256
+	sei();
+	while (1);
+}
+
+ISR(TIMER0_COMPA_vect)
+{
+	PORTD ^= (1<<PORTD6); //toggle PD6
+	OCR0A += 71;// refresh output compare register
+	
+}
