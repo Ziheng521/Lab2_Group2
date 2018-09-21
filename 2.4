@@ -1,0 +1,198 @@
+/*
+ * GccApplication5.c
+ *
+ * Created: 2018/9/8 20:47:32
+ * Author : lzhof
+ */ 
+#define F_CPU 16000000
+#include <avr/io.h>
+#include <avr/interrupt.h>
+#include <util/delay.h>
+#include <stdio.h>
+#define BUAD 9600
+#define BRC ((F_CPU/16/BUAD)-1)
+char buffer [8];
+int l,c=0;
+int overflow=0;
+uint16_t n=0, m=0, w=0; // storage 
+
+int adc_value = 0;
+int a=0; //replace ADC with a
+
+int main(void)
+{
+    /* Replace with your application code */
+	
+	DDRB |= (1 << DDB5);
+	PORTB |= (1 << PORTB5);
+	TCCR0A |= (1 << WGM01); //CTC mode
+	TCCR0B = (1 << CS01) | (1 << CS00); //prescaler 64bit
+	OCR0A = adc_value;
+	TIMSK0 = (1 << OCIE0A); //output compare enable
+	
+	
+	PORTB |= 0x10;
+
+	
+	
+	
+	UBRR0H = (BRC >> 8);
+	UBRR0L = BRC;
+	UCSR0B |= (1<<TXEN0);
+	UCSR0C |= (1<<UCSZ01) | (1<<UCSZ00); // transmit 8 bits
+	
+	
+	DDRB |= 0x02; //PB1 output
+	
+	
+	PORTB |= (1<<PORTB1); //PB1 high
+	OCR1A = 10; // set ORC
+	TIMSK1 |= (1 << OCIE1A); //set compare A interruption
+	TCCR1B |= (1 << CS11); // pre-scaler 8 bits
+	
+	TIMSK1 |= (1 <<(TOIE1));
+	
+	sei(); //set i
+	
+	
+	
+	
+    while (1) 
+    {		
+		
+		l=sprintf (buffer, "%hu\n", w);
+		while(c<l)
+		{
+			UDR0=buffer[c];
+			++c;
+			while (!(UCSR0A & 0x40));
+			UCSR0A |= 0x40;
+		}
+		c=0;
+		
+		 // turn w into (0-1024)
+		if (PINB & 0x10)
+		{
+			a = 7.8125*w;
+			if ((a >=0) && (a <=128))
+			{
+				OCR0A = 119;
+			}
+			if ((a > 128) &&(a <=256))
+			{
+				OCR0A = 106;
+			}
+			if ((a > 256) && (a <= 384))
+			{
+				OCR0A = 95;
+			}
+			if ((a > 384) && (a <= 512))
+			{
+				OCR0A = 89;
+			}
+			if ((a > 512) && (a <= 640))
+			{
+				OCR0A = 80;
+			}
+			if ((a > 640) && (a <= 768))
+			{
+				OCR0A = 71;
+			}
+			if ((a > 768) && (a <= 896))
+			{
+				OCR0A = 63;
+			}
+			
+			if (( a > 896) && (a <= 1024))
+			{
+				OCR0A = 60;
+			}
+		}
+		else
+		{
+			adc_value = -0.0576*(7.8125*w)+119;//Read the ADC value, really that's just it
+			OCR0A = adc_value;
+		}
+	}
+	
+		
+		
+		
+		
+	}
+	
+    
+ISR(TIMER1_OVF_vect)
+{
+	++overflow;
+	if (overflow>1)
+	{
+		TIMSK1 &= ~(1 << ICIE1); // disable edge interruption
+		TIMSK1 |= (1 << OCIE1A); // set compare A interruption
+		PORTB |= (1<<PORTB1); //PB1 high
+		OCR1A = 10; // set ORC
+		TCNT1 = 0;
+		TCCR1B |= (1 << CS11); // pre-scaler 8 bits
+		sei(); //set i
+		
+	}
+}
+
+
+ISR(TIMER1_COMPA_vect) //compare A interruption
+{
+	
+	if(PORTB & (1<<PORTB1))
+	{
+
+	PORTB &= ~(1 << PORTB1); // PINB1 low
+	TIMSK1 &= ~(1 << OCIE1A); // disable compare A interruption
+    TIMSK1 |= (1 << ICIE1); // set edge interruption
+    TCCR1B |= (1 << ICES1); //rising edge
+	sei(); //set i
+	
+	}
+	
+}
+
+ISR(TIMER1_CAPT_vect) // edge interruption
+{
+	if (TCCR1B & (1<< ICES1))
+	{
+		
+		n = ICR1; //store ICR1
+		TCCR1B &= ~(1 << ICES1); //falling edge
+		
+		
+	}
+	else
+	{
+		m = ICR1; //store ICR1
+		w = m-n; //get the width of the response pulse
+		TIMSK1 &= ~(1 << ICIE1); // disable edge interruption
+		TIMSK1 |= (1 << OCIE1A); // set compare A interruption
+		PORTB |= (1<<PORTB1); //PB1 high
+		OCR1A = 10; // set ORC
+		TCNT1 = 0;
+		TCCR1B |= (1 << CS11); // pre-scaler 8 bits
+		sei(); //set i
+		
+	}
+}
+
+ISR(TIMER0_COMPA_vect)
+{
+	if (PORTB & (1 << PORTB5))
+	{
+		PORTB &= ~(1 << PORTB5);// PB5 low
+		
+	}
+	else
+	{
+		PORTB |= (1 << PORTB5);// PB5 high
+		
+	}
+	
+}
+
+
