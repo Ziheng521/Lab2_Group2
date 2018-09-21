@@ -1,0 +1,25 @@
+/*
+ * GccApplication3.c
+ *
+ * Created: 2018/9/7 17:50:58
+ * Author : lzhof
+ */ 
+#define F_CPU 16000000L
+#include <avr/io.h>
+#include <avr/interrupt.h>
+#include <util/delay.h>
+
+
+int main(void)
+{
+    /* Replace with your application code */
+	DDRD |= (1<<DDD6);
+	TCCR0A |= (1<<WGM01);// set CTC mode
+	TCCR0A |= (1<<COM0A0); //Toggle OC0A on Compare Match
+	OCR0A = 70; //set output compare register
+	TCCR0B=(1<<CS02); //prescaler CLK/256
+	
+	while (1)
+	{
+	}
+}
