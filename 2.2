@@ -43,13 +43,13 @@ int main(void)
     while (1) 
     {		
 		
-		l=sprintf (buffer, "%hu\n", w);
+		l=sprintf (buffer, "%hu\n", w);// put w into buffer, record the length of w as a integer
 		while(c<l)
 		{
 			UDR0=buffer[c];
 			++c;
-			while (!(UCSR0A & 0x40));
-			UCSR0A |= 0x40;
+			while (!(UCSR0A & 0x40));//transmit w as a integer
+			UCSR0A |= 0x40;// when the transmission is done, clear the flag
 		}
 		c=0;
 	}
