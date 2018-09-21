@@ -1,0 +1,116 @@
+/*
+ * GccApplication5.c
+ *
+ * Created: 2018/9/8 20:47:32
+ * Author : lzhof
+ */ 
+#define F_CPU 16000000
+#include <avr/io.h>
+#include <avr/interrupt.h>
+#include <util/delay.h>
+#include <stdio.h>
+#define BUAD 9600
+#define BRC ((F_CPU/16/BUAD)-1)
+char buffer [8];
+int l,c=0;
+int overflow=0;
+uint16_t n=0, m=0, w=0; // storage 
+int main(void)
+{
+    /* Replace with your application code */
+	
+	UBRR0H = (BRC >> 8);
+	UBRR0L = BRC;
+	UCSR0B |= (1<<TXEN0);
+	UCSR0C |= (1<<UCSZ01) | (1<<UCSZ00); // transmit 8 bits
+	
+	
+	DDRB |= 0x02; //PB1 output
+	
+	
+	PORTB |= (1<<PORTB1); //PB1 high
+	OCR1A = 10; // set ORC
+	TIMSK1 |= (1 << OCIE1A); //set compare A interruption
+	TCCR1B |= (1 << CS11); // pre-scaler 8 bits
+	
+	TIMSK1 |= (1 <<(TOIE1));
+	
+	sei(); //set i
+	
+	
+	
+	
+    while (1) 
+    {		
+		
+		l=sprintf (buffer, "%hu\n", w);
+		while(c<l)
+		{
+			UDR0=buffer[c];
+			++c;
+			while (!(UCSR0A & 0x40));
+			UCSR0A |= 0x40;
+		}
+		c=0;
+	}
+		
+
+    
+}
+ISR(TIMER1_OVF_vect)
+{
+	++overflow;
+	if (overflow>1)
+	{
+		TIMSK1 &= ~(1 << ICIE1); // disable edge interruption
+		TIMSK1 |= (1 << OCIE1A); // set compare A interruption
+		PORTB |= (1<<PORTB1); //PB1 high
+		OCR1A = 10; // set ORC
+		TCNT1 = 0;
+		TCCR1B |= (1 << CS11); // pre-scaler 8 bits
+		sei(); //set i
+		
+	}
+}
+
+
+ISR(TIMER1_COMPA_vect) //compare A interruption
+{
+	
+	if(PORTB & (1<<PORTB1))
+	{
+
+	PORTB &= ~(1 << PORTB1); // PINB1 low
+	TIMSK1 &= ~(1 << OCIE1A); // disable compare A interruption
+    TIMSK1 |= (1 << ICIE1); // set edge interruption
+    TCCR1B |= (1 << ICES1); //rising edge
+	sei(); //set i
+	
+	}
+	
+}
+
+ISR(TIMER1_CAPT_vect) // edge interruption
+{
+	if (TCCR1B & (1<< ICES1))
+	{
+		
+		n = ICR1; //store ICR1
+		TCCR1B &= ~(1 << ICES1); //falling edge
+		
+		
+	}
+	else
+	{
+		m = ICR1; //store ICR1
+		w = m-n; //get the width of the response pulse
+		TIMSK1 &= ~(1 << ICIE1); // disable edge interruption
+		TIMSK1 |= (1 << OCIE1A); // set compare A interruption
+		PORTB |= (1<<PORTB1); //PB1 high
+		OCR1A = 10; // set ORC
+		TCNT1 = 0;
+		TCCR1B |= (1 << CS11); // pre-scaler 8 bits
+		sei(); //set i
+		
+	}
+}
