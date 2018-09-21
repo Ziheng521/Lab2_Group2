@@ -1,0 +1,51 @@
+/*
+ * GccApplication5.c
+ *
+ * Created: 2018/9/8 20:47:32
+ * Author : lzhof
+ */ 
+#define F_CPU 16000000
+#include <avr/io.h>
+#include <avr/interrupt.h>
+#include <stdio.h>
+#include <util/delay.h>
+
+int main(void)
+{
+    /* Replace with your application code */
+	DDRB |= (1 << DDB5); //PB5 output
+	PORTB |= (1 << PORTB0); //set PB0 high
+	if (PINB & (1 << PINB0))
+	{
+		TCCR1B &= ~(1 << ICES1); 
+		
+		PORTB &= ~(1 << PORTB5);// if PB0 is high, set falling edge interruption and PB5 low
+	}
+	else
+	{
+		TCCR1B |= (1 << ICES1); 
+		PORTB |= (1 << PORTB5);// if PB0 is low, et rising edge interruption and PB5 high
+	}
+	TIMSK1 |= (1 << ICIE1); 
+
+	sei(); 
+	
+    while (1) 
+    {		
+    }
+}
+
+
+ISR(TIMER1_CAPT_vect) 
+{
+	if (TCCR1B & (1<< ICES1))
+	{
+		PORTB &= ~(1 << PORTB5);//if capture rising edge, set PB5 low
+		TCCR1B &= ~(1 << ICES1); 
+	}
+	else
+	{
+		PORTB |= (1 << PORTB5);//if capture falling edge, set PB5 high
+		TCCR1B |= (1 << ICES1); 
+	}
+}
