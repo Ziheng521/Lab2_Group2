@@ -1,0 +1,30 @@
+/*
+ * GccApplication2.c
+ *
+ * Created: 2018/9/7 14:04:49
+ * Author : lzhof
+ */ 
+
+#include <avr/io.h>
+#include <avr/interrupt.h>
+int extraTime = 0;
+
+int main(void)
+{
+    /* Replace with your application code */
+	DDRD = 0x40;
+	TCCR0A = (1 << WGM01); //CTC mode
+	OCR0A = 195; // output compare register A
+	TIMSK0 = (1 << OCIE0A); //out put compare interruption enable
+	sei();
+	TCCR0B = (1 << CS02) | (1 << CS00); //prescalar CLK/1024
+    while (1);
+}
+ISR(TIMER0_COMPA_vect)
+	{
+		extraTime++;  
+		if(extraTime > 100)
+		{
+			PORTD ^= (1 << PORTD6);//toggle every 1s
+		}
+	}
